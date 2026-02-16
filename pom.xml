@@ -30,7 +30,7 @@
         <java.version>21</java.version>
         <spring-cloud.version>2025.0.0</spring-cloud.version>
         <spring-cloud-alibaba.version>2025.0.0.0</spring-cloud-alibaba.version>
-        <langchain4j.version>0.33.0</langchain4j.version>
+        <langchain4j.version>1.11.0-beta19</langchain4j.version>
         <springdoc.version>2.6.0</springdoc.version>
         <hutool.version>5.8.38</hutool.version>
         <knife4j.version>4.4.0</knife4j.version>
@@ -85,7 +85,7 @@
         <dependency>
             <groupId>dev.langchain4j</groupId>
             <artifactId>langchain4j-community-dashscope</artifactId>
-            <version>1.11.0-beta19</version>
+            <version>${langchain4j.version}</version>
             <scope>compile</scope>
         </dependency>
 
