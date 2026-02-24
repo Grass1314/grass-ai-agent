@@ -1,12 +1,28 @@
 spring:
   application:
     name: grass-ai-agent
+  # 数据库连接池
+  datasource:
+    dynamic:
+      primary: mysql
+      strict: false
+      datasource:
+        mysql:
+          url: jdbc:mysql://175.24.73.151:3306/grass_ai_agent?useSSL=false&serverTimezone=UTC
+          username: grass_ai_agent_root
+          password: grass_ai_agent_root_123456
+          driver-class-name: com.mysql.cj.jdbc.Driver
+
   ai:
     dashscope:
       api-key: sk-eb1069f36bcd4af0bd638c5e6fa4f026
       chat:
         options:
           model: qwen-plus
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: false
 
 server:
   port: 8123

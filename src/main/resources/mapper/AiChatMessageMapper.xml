@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.grass.grassaiagent.mapper.AiChatMessageMapper">
+
+    <resultMap id="BaseResultMap" type="com.grass.grassaiagent.domain.AiChatMessage">
+            <id property="id" column="id" />
+            <result property="sessionId" column="session_id" />
+            <result property="chatAiId" column="chat_ai_id" />
+            <result property="messageOrder" column="message_order" />
+            <result property="roleType" column="role_type" />
+            <result property="content" column="content" />
+            <result property="tokens" column="tokens" />
+            <result property="createTime" column="create_time" />
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,session_id,chat_ai_id,message_order,role_type,content,
+        tokens,create_time
+    </sql>
+</mapper>
