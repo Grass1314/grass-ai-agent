@@ -1,4 +1,4 @@
-package com.grass.grassaiagent.service;
+package com.grass.grassaiagent.service.aiChat;
 
 import com.grass.grassaiagent.domain.AiChatMessage;
 import com.baomidou.mybatisplus.extension.service.IService;

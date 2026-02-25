@@ -19,6 +19,9 @@ spring:
       chat:
         options:
           model: qwen-plus
+      # 多模态（读图）模型，用于图片解释
+      multimodal:
+        model: qwen-vl-plus
 
 mybatis-plus:
   configuration:

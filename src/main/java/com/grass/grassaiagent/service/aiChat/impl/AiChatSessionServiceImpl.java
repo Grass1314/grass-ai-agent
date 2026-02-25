@@ -1,9 +1,9 @@
-package com.grass.grassaiagent.service.impl;
+package com.grass.grassaiagent.service.aiChat.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.grass.grassaiagent.domain.AiChatSession;
 import com.grass.grassaiagent.mapper.AiChatSessionMapper;
-import com.grass.grassaiagent.service.AiChatSessionService;
+import com.grass.grassaiagent.service.aiChat.AiChatSessionService;
 import org.springframework.stereotype.Service;
 
 /**

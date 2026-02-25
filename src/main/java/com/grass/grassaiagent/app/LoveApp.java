@@ -10,10 +10,14 @@ import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.prompt.SystemPromptTemplate;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author Mr.Liuxq
@@ -28,6 +32,9 @@ public class LoveApp {
     private final ChatClient chatClient;
 
     private final MysqlSaveChatMemory mysqlSaveChatMemory;
+
+    /** 从模板渲染后的默认系统提示词（用于 doChatReport 等未走模板的场景） */
+    private final String systemPromptFromTemplate;
 
     private static final String SYSTEM_PROMPT = "扮演深耕恋爱心理领域的专家。开场向用户表明身份，告知用户可倾诉恋爱难题。" +
             "围绕单身、恋爱、已婚三种状态提问：单身状态询问社交圈拓展及追求心仪对象的困扰；" +
@@ -61,11 +68,27 @@ public class LoveApp {
                 .build();
     }*/
 
-    public LoveApp(ChatModel dashscopeChatModel, MysqlSaveChatMemory mysqlSaveChatMemory) {
+    /*public LoveApp(ChatModel dashscopeChatModel, MysqlSaveChatMemory mysqlSaveChatMemory) {
         // 基于mysql的对话记忆
         this.mysqlSaveChatMemory = mysqlSaveChatMemory;
         chatClient = ChatClient.builder(dashscopeChatModel)
                 .defaultSystem(SYSTEM_PROMPT)
+                .defaultAdvisors(MessageChatMemoryAdvisor.builder(mysqlSaveChatMemory).build(),
+                        new BannedWordsAdvisor(),
+                        new MyLoggerAdvisor())
+                .build();
+    }*/
+
+    public LoveApp(
+            ChatModel dashscopeChatModel,
+            MysqlSaveChatMemory mysqlSaveChatMemory,
+            @Value("classpath:/prompts/system-message.st") Resource systemPromptResource) {
+        this.mysqlSaveChatMemory = mysqlSaveChatMemory;
+        SystemPromptTemplate systemPromptTemplate = new SystemPromptTemplate(systemPromptResource);
+        this.systemPromptFromTemplate = systemPromptTemplate.createMessage(Map.of("name", "小爱")).getText();
+        log.debug("系统提示词模板已加载: {}", systemPromptFromTemplate);
+        this.chatClient = ChatClient.builder(dashscopeChatModel)
+                .defaultSystem(systemPromptFromTemplate)
                 .defaultAdvisors(MessageChatMemoryAdvisor.builder(mysqlSaveChatMemory).build(),
                         new BannedWordsAdvisor(),
                         new MyLoggerAdvisor())
@@ -98,11 +121,18 @@ public class LoveApp {
 
     }
 
+    /**
+     * 对话并生成恋爱报告
+     *
+     * @param message 输入
+     * @param chatId 会话id
+     * @return 恋爱报告
+     */
     public LoveReport doChatReport(String message, String chatId) {
         try {
             LoveReport loveReport = chatClient
                     .prompt()
-                    .system(SYSTEM_PROMPT + "每次对话后都要生成恋爱结果，标题为{用户名}的恋爱报告，内容为建议列表")
+                    .system(systemPromptFromTemplate + "每次对话后都要生成恋爱结果，标题为{用户名}的恋爱报告，内容为建议列表")
                     .user(message)
                     .advisors(spec -> spec.param(AbstractChatMemoryAdvisor.CHAT_MEMORY_CONVERSATION_ID_KEY, chatId)
                             .param(AbstractChatMemoryAdvisor.CHAT_MEMORY_RETRIEVE_SIZE_KEY, 10))
