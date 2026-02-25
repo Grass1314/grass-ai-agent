@@ -35,7 +35,7 @@
         <hutool.version>5.8.38</hutool.version>
         <knife4j.version>4.4.0</knife4j.version>
         <dashscope-sdk.version>2.22.9</dashscope-sdk.version>
-        <spring-ai-alibaba.version>1.0.0-M6.1</spring-ai-alibaba.version>
+        <spring-ai-alibaba.version>1.1.2.1</spring-ai-alibaba.version>
         <jsonschema-generator.version>4.38.0</jsonschema-generator.version>
         <kryo.version>5.6.2</kryo.version>
         <mysql.version>8.3.0</mysql.version>
@@ -82,7 +82,7 @@
 
         <dependency>
             <groupId>com.alibaba.cloud.ai</groupId>
-            <artifactId>spring-ai-alibaba-starter</artifactId>
+            <artifactId>spring-ai-alibaba-starter-dashscope</artifactId>
             <version>${spring-ai-alibaba.version}</version>
         </dependency>
 
@@ -92,6 +92,12 @@
             <artifactId>langchain4j-community-dashscope</artifactId>
             <version>${langchain4j.version}</version>
             <scope>compile</scope>
+            <exclusions>
+                <exclusion>
+                    <artifactId>dashscope-sdk-java</artifactId>
+                    <groupId>com.alibaba</groupId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>
@@ -133,6 +139,12 @@
             <version>${dynamic-datasource.version}</version>
         </dependency>
 
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-markdown-document-reader</artifactId>
+            <version>1.1.2</version>
+        </dependency>
+
 
 
 
@@ -146,6 +158,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
+                    <release>21</release>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>
@@ -169,34 +182,6 @@
         </plugins>
     </build>
 
-    <repositories>
-        <repository>
-            <id>spring-milestones</id>
-            <name>Spring Milestones</name>
-            <url>https://repo.spring.io/milestone</url>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-        </repository>
-        <repository>
-            <id>spring-snapshots</id>
-            <name>Spring Snapshots</name>
-            <url>https://repo.spring.io/snapshot</url>
-            <releases>
-                <enabled>false</enabled>
-            </releases>
-        </repository>
-        <repository>
-            <name>Central Portal Snapshots</name>
-            <id>central-portal-snapshots</id>
-            <url>https://central.sonatype.com/repository/maven-snapshots/</url>
-            <releases>
-                <enabled>false</enabled>
-            </releases>
-            <snapshots>
-                <enabled>true</enabled>
-            </snapshots>
-        </repository>
-    </repositories>
+    <!-- Spring AI 1.1.2 与 spring-ai-alibaba 1.1.2.0 均已发布至 Maven Central，无需额外仓库 -->
 
 </project>

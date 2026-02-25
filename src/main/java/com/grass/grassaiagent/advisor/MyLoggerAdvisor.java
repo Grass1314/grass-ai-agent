@@ -1,9 +1,13 @@
 package com.grass.grassaiagent.advisor;
 
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.NonNull;
-import org.springframework.ai.chat.client.advisor.api.*;
-import org.springframework.ai.chat.model.MessageAggregator;
+import org.springframework.ai.chat.client.ChatClientMessageAggregator;
+import org.springframework.ai.chat.client.ChatClientRequest;
+import org.springframework.ai.chat.client.ChatClientResponse;
+import org.springframework.ai.chat.client.advisor.api.CallAdvisor;
+import org.springframework.ai.chat.client.advisor.api.CallAdvisorChain;
+import org.springframework.ai.chat.client.advisor.api.StreamAdvisor;
+import org.springframework.ai.chat.client.advisor.api.StreamAdvisorChain;
 import reactor.core.publisher.Flux;
 
 /**
@@ -14,35 +18,35 @@ import reactor.core.publisher.Flux;
  * @date 2026/02/24 10:40
  */
 @Slf4j
-public class MyLoggerAdvisor implements CallAroundAdvisor, StreamAroundAdvisor {
-    @Override
-    public @NonNull AdvisedResponse aroundCall(@NonNull AdvisedRequest advisedRequest, CallAroundAdvisorChain chain) {
-        advisedRequest = this.before(advisedRequest);
-        AdvisedResponse advisedResponse = chain.nextAroundCall(advisedRequest);
-        advisedResponse = this.after(advisedResponse);
-        return advisedResponse;
-    }
+public class MyLoggerAdvisor implements CallAdvisor, StreamAdvisor {
 
     @Override
-    public Flux<AdvisedResponse> aroundStream(AdvisedRequest advisedRequest, StreamAroundAdvisorChain chain) {
-        advisedRequest = this.before(advisedRequest);
-        Flux<AdvisedResponse> advisedResponse = chain.nextAroundStream(advisedRequest);
-        // Tips:MessageAggregator中不能修改advisedResponse，否则会报错，他是一个只读操作
-        return new MessageAggregator().aggregateAdvisedResponse(advisedResponse, this::after);
-    }
-
-    private AdvisedRequest before(AdvisedRequest advisedRequest) {
-        log.info("AI Request Before: {}", advisedRequest.userText());
-        return advisedRequest;
-    }
-
-    private AdvisedResponse after(AdvisedResponse advisedResponse) {
-        log.info("AI Response After: {}", advisedResponse.response().getResult().getOutput().getText());
-        return advisedResponse;
+    public ChatClientResponse adviseCall(ChatClientRequest chatClientRequest, CallAdvisorChain callAdvisorChain) {
+        logRequest(chatClientRequest);
+        ChatClientResponse chatClientResponse = callAdvisorChain.nextCall(chatClientRequest);
+        logResponse(chatClientResponse);
+        return chatClientResponse;
     }
 
     @Override
-    public @NonNull String getName() {
+    public Flux<ChatClientResponse> adviseStream(ChatClientRequest chatClientRequest, StreamAdvisorChain streamAdvisorChain) {
+        logRequest(chatClientRequest);
+        Flux<ChatClientResponse> responses = streamAdvisorChain.nextStream(chatClientRequest);
+        return new ChatClientMessageAggregator().aggregateChatClientResponse(responses, this::logResponse);
+    }
+
+    private void logRequest(ChatClientRequest request) {
+        log.info("AI Request: {}", request.prompt().getContents());
+    }
+
+    private void logResponse(ChatClientResponse response) {
+        if (response.chatResponse() != null && response.chatResponse().getResult() != null) {
+            log.info("AI Response: {}", response.chatResponse().getResult().getOutput().getText());
+        }
+    }
+
+    @Override
+    public String getName() {
         return this.getClass().getSimpleName();
     }
 
