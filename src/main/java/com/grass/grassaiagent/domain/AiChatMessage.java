@@ -23,16 +23,10 @@ public class AiChatMessage implements Serializable {
     private String id;
 
     /**
-     * 关联的会话ID
+     * 关联 ai_chat_session.id（外键）
      */
     @TableField(value = "session_id")
     private String sessionId;
-
-    /**
-     * AI会话主表ID
-     */
-    @TableField(value = "chat_ai_id")
-    private String chatAiId;
 
     /**
      * 消息顺序（从0递增）

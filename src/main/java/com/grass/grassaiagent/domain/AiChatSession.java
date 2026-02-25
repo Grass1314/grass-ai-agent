@@ -23,10 +23,10 @@ public class AiChatSession implements Serializable {
     private String id;
 
     /**
-     * 会话唯一标识(UUID)
+     * 客户端会话ID（与 chatId 一致），业务唯一
      */
-    @TableField(value = "session_id")
-    private String sessionId;
+    @TableField(value = "conversation_id")
+    private String conversationId;
 
     /**
      * 用户标识

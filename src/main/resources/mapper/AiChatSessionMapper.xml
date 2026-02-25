@@ -6,7 +6,7 @@
 
     <resultMap id="BaseResultMap" type="com.grass.grassaiagent.domain.AiChatSession">
             <id property="id" column="id" />
-            <result property="sessionId" column="session_id" />
+            <result property="conversationId" column="conversation_id" />
             <result property="userId" column="user_id" />
             <result property="title" column="title" />
             <result property="createTime" column="create_time" />
@@ -14,6 +14,6 @@
     </resultMap>
 
     <sql id="Base_Column_List">
-        id,session_id,user_id,title,create_time,update_time
+        id,conversation_id,user_id,title,create_time,update_time
     </sql>
 </mapper>

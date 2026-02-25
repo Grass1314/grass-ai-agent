@@ -7,7 +7,6 @@
     <resultMap id="BaseResultMap" type="com.grass.grassaiagent.domain.AiChatMessage">
             <id property="id" column="id" />
             <result property="sessionId" column="session_id" />
-            <result property="chatAiId" column="chat_ai_id" />
             <result property="messageOrder" column="message_order" />
             <result property="roleType" column="role_type" />
             <result property="content" column="content" />
@@ -16,7 +15,6 @@
     </resultMap>
 
     <sql id="Base_Column_List">
-        id,session_id,chat_ai_id,message_order,role_type,content,
-        tokens,create_time
+        id,session_id,message_order,role_type,content,tokens,create_time
     </sql>
 </mapper>

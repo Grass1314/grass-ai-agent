@@ -5,7 +5,9 @@ import com.grass.grassaiagent.advisor.MyLoggerAdvisor;
 import com.grass.grassaiagent.chatmemory.MysqlSaveChatMemory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.AbstractChatMemoryAdvisor;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
+import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.stereotype.Component;
@@ -81,12 +83,14 @@ public class LoveApp {
         ChatResponse chatResponse = chatClient
                 .prompt()
                 .user(message)
-                .advisors(spec -> spec.param("CHAT_MEMORY_CONVERSATION_ID_KEY", chatId)
-                        .param("CHAT_MEMORY_CONVERSATION_ID_KEY", 10))
+                .advisors(spec -> spec.param(AbstractChatMemoryAdvisor.CHAT_MEMORY_CONVERSATION_ID_KEY, chatId)
+                        .param(AbstractChatMemoryAdvisor.CHAT_MEMORY_RETRIEVE_SIZE_KEY, 10))
                 .call()
                 .chatResponse();
         String content = chatResponse.getResult().getOutput().getText();
         log.info("content: {}", content);
+        // 用户消息由 MessageChatMemoryAdvisor 写入，此处补充落库大模型响应
+        mysqlSaveChatMemory.add(chatId, new AssistantMessage(content));
         return content;
     }
 
@@ -100,16 +104,20 @@ public class LoveApp {
                     .prompt()
                     .system(SYSTEM_PROMPT + "每次对话后都要生成恋爱结果，标题为{用户名}的恋爱报告，内容为建议列表")
                     .user(message)
-                    .advisors(spec -> spec.param("CHAT_MEMORY_CONVERSATION_ID_KEY", chatId)
-                            .param("CHAT_MEMORY_CONVERSATION_ID_KEY", 10))
+                    .advisors(spec -> spec.param(AbstractChatMemoryAdvisor.CHAT_MEMORY_CONVERSATION_ID_KEY, chatId)
+                            .param(AbstractChatMemoryAdvisor.CHAT_MEMORY_RETRIEVE_SIZE_KEY, 10))
                     .call()
                     .entity(LoveReport.class);
             log.info("loveReport: {}", loveReport);
+            String reportText = loveReport.title() + "\n" + String.join("\n", loveReport.suggestions());
+            mysqlSaveChatMemory.add(chatId, new AssistantMessage(reportText));
             return loveReport;
         } catch (Exception e) {
             // 处理违禁词等错误情况
             log.warn("生成恋爱报告时发生错误: {}", e.getMessage());
-            return new LoveReport("内容审核提醒", Arrays.asList("您的消息包含不当内容，无法生成恋爱报告", "请使用文明用语重新输入"));
+            LoveReport fallback = new LoveReport("内容审核提醒", Arrays.asList("您的消息包含不当内容，无法生成恋爱报告", "请使用文明用语重新输入"));
+            mysqlSaveChatMemory.add(chatId, new AssistantMessage(fallback.title() + "\n" + String.join("\n", fallback.suggestions())));
+            return fallback;
         }
     }
 }
