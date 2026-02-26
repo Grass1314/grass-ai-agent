@@ -6,10 +6,12 @@ import com.grass.grassaiagent.chatmemory.MysqlSaveChatMemory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
+import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.SystemPromptTemplate;
+import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
@@ -29,6 +31,9 @@ import java.util.Map;
 public class LoveApp {
 
     private final ChatClient chatClient;
+
+    @jakarta.annotation.Resource
+    private VectorStore loveAppVectorStore;
 
     /** 从模板渲染后的默认系统提示词（用于 doChatReport 等未走模板的场景） */
     private final String systemPromptFromTemplate;
@@ -132,5 +137,25 @@ public class LoveApp {
             log.warn("生成恋爱报告时发生错误: {}", e.getMessage());
             return new LoveReport("内容审核提醒", Arrays.asList("您的消息包含不当内容，无法生成恋爱报告", "请使用文明用语重新输入"));
         }
+    }
+
+    /**
+     * 对话并使用 RAG
+     *
+     * @param message 输入
+     * @param chatId 会话id
+     * @return 内容
+     */
+    public String doChatWithRag(String message, String chatId) {
+        ChatResponse chatResponse = chatClient.prompt()
+                .user(message)
+                .advisors(advisorSpec -> advisorSpec.param(ChatMemory.CONVERSATION_ID, chatId))
+                .advisors(new MyLoggerAdvisor())
+                .advisors(QuestionAnswerAdvisor.builder(loveAppVectorStore).build())
+                .call()
+                .chatResponse();
+        String content = chatResponse.getResult().getOutput().getText();
+        log.info("content: {}", content);
+        return content;
     }
 }

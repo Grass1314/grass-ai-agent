@@ -92,7 +92,7 @@ public class MysqlSaveChatMemory implements ChatMemory {
 
         if (!messagesToSave.isEmpty()) {
             aiChatMessageService.saveBatch(messagesToSave);
-            log.info("保存 {} 条消息到会话 {}", messagesToSave.size(), sessionId);
+            log.debug("保存 {} 条消息到会话 {}", messagesToSave.size(), sessionId);
         }
     }
 

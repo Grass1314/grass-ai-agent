@@ -23,6 +23,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * 多模态图片解释控制器测试：Mock 服务层，校验请求/响应与错误处理。
  */
+@Deprecated
 @WebMvcTest(controllers = AiMultimodalController.class)
 class AiMultimodalControllerTest {
 

@@ -41,6 +41,8 @@
         <mysql.version>8.3.0</mysql.version>
         <mysql-plus.version>3.5.12</mysql-plus.version>
         <dynamic-datasource.version>4.3.1</dynamic-datasource.version>
+        <spring-ai-markdown.version>1.1.2</spring-ai-markdown.version>
+        <spring-ai-advisors-vector.version>1.1.2</spring-ai-advisors-vector.version>
     </properties>
     <dependencies>
         <dependency>
@@ -53,6 +55,7 @@
             <artifactId>lombok</artifactId>
             <optional>true</optional>
         </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -142,11 +145,15 @@
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-markdown-document-reader</artifactId>
-            <version>1.1.2</version>
+            <version>${spring-ai-markdown.version}</version>
         </dependency>
 
-
-
+        <!-- QuestionAnswerAdvisor 等 RAG 能力，需配合 VectorStore 使用，版本与 Spring AI 1.1.2 对齐 -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-advisors-vector-store</artifactId>
+            <version>${spring-ai-advisors-vector.version}</version>
+        </dependency>
 
 
 
