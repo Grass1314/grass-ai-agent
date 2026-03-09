@@ -3,6 +3,7 @@ package com.grass.grassaiagent.app;
 import com.grass.grassaiagent.advisor.BannedWordsAdvisor;
 import com.grass.grassaiagent.advisor.MyLoggerAdvisor;
 import com.grass.grassaiagent.chatmemory.MysqlSaveChatMemory;
+import com.grass.grassaiagent.rag.QueryRewriter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
@@ -37,6 +38,9 @@ public class LoveApp {
 
     /** 从模板渲染后的默认系统提示词（用于 doChatReport 等未走模板的场景） */
     private final String systemPromptFromTemplate;
+
+    @jakarta.annotation.Resource
+    private QueryRewriter queryRewriter;
 
     private static final String SYSTEM_PROMPT = "扮演深耕恋爱心理领域的专家。开场向用户表明身份，告知用户可倾诉恋爱难题。" +
             "围绕单身、恋爱、已婚三种状态提问：单身状态询问社交圈拓展及追求心仪对象的困扰；" +
@@ -147,8 +151,10 @@ public class LoveApp {
      * @return 内容
      */
     public String doChatWithRag(String message, String chatId) {
+        // 查询重写
+        String rewrittenMessage = queryRewriter.doQueryRewrite(message);
         ChatResponse chatResponse = chatClient.prompt()
-                .user(message)
+                .user(rewrittenMessage)
                 .advisors(advisorSpec -> advisorSpec.param(ChatMemory.CONVERSATION_ID, chatId))
                 .advisors(new MyLoggerAdvisor())
                 .advisors(QuestionAnswerAdvisor.builder(loveAppVectorStore).build())

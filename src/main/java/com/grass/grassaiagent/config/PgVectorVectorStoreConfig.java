@@ -13,7 +13,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-import javax.sql.DataSource;
 import java.util.List;
 
 import static org.springframework.ai.vectorstore.pgvector.PgVectorStore.PgDistanceType.COSINE_DISTANCE;
@@ -21,8 +20,9 @@ import static org.springframework.ai.vectorstore.pgvector.PgVectorStore.PgIndexT
 
 /**
  * @description: PgVectorVector向量库 配置
- * 因项目使用 dynamic-datasource，默认 JdbcTemplate 指向 MySQL，
- * 此处手动创建专用于 PostgreSQL 的 DataSource / JdbcTemplate 供 PgVector 使用。
+ * 因项目使用 dynamic-datasource，默认 DataSource / JdbcTemplate 指向 MySQL，
+ * 此处在方法内部创建专用于 PostgreSQL 的连接，不注册为 Spring Bean，
+ * 避免干扰 MyBatis-Plus 的数据源路由。
  * @author Mr.Liuxq
  * @date 2025/7/22 16:54
  * @version 1.0
@@ -45,24 +45,18 @@ public class PgVectorVectorStoreConfig {
     @Value("${spring.datasource.dynamic.datasource.postgresql.driver-class-name}")
     private String pgDriverClassName;
 
-    @Bean
-    public DataSource pgDataSource() {
-        return DataSourceBuilder.create()
+    private JdbcTemplate createPgJdbcTemplate() {
+        return new JdbcTemplate(DataSourceBuilder.create()
                 .url(pgUrl)
                 .username(pgUsername)
                 .password(pgPassword)
                 .driverClassName(pgDriverClassName)
-                .build();
+                .build());
     }
 
     @Bean
-    public JdbcTemplate pgJdbcTemplate(DataSource pgDataSource) {
-        return new JdbcTemplate(pgDataSource);
-    }
-
-    @Bean
-    public VectorStore pgVectorVectorStore(JdbcTemplate pgJdbcTemplate, EmbeddingModel dashscopeEmbeddingModel) {
-        return PgVectorStore.builder(pgJdbcTemplate, dashscopeEmbeddingModel)
+    public VectorStore pgVectorVectorStore(EmbeddingModel dashscopeEmbeddingModel) {
+        return PgVectorStore.builder(createPgJdbcTemplate(), dashscopeEmbeddingModel)
                 .dimensions(1024)
                 .distanceType(COSINE_DISTANCE)
                 .indexType(HNSW)

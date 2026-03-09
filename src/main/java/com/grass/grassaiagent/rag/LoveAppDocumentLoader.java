@@ -37,11 +37,14 @@ public class LoveAppDocumentLoader {
                 if (filename == null) {
                     filename = "document-" + System.currentTimeMillis();
                 }
+                // 提取文档名称倒数第三和第二个字作为标签
+                String status = filename.substring(filename.length() - 7, filename.length() - 5);
                 MarkdownDocumentReaderConfig config = MarkdownDocumentReaderConfig.builder()
                         .withHorizontalRuleCreateDocument(true)
                         .withIncludeCodeBlock(false)
                         .withIncludeBlockquote(false)
                         .withAdditionalMetadata("filename", filename)
+                        .withAdditionalMetadata("status", status)
                         .build();
                 MarkdownDocumentReader reader = new MarkdownDocumentReader(resource, config);
                 allDocumentList.addAll(reader.get());
