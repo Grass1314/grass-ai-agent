@@ -43,6 +43,7 @@
         <dynamic-datasource.version>4.3.1</dynamic-datasource.version>
         <spring-ai-markdown.version>1.1.2</spring-ai-markdown.version>
         <spring-ai-advisors-vector.version>1.1.2</spring-ai-advisors-vector.version>
+        <spring-ai-pgvector.version>1.1.2</spring-ai-pgvector.version>
     </properties>
     <dependencies>
         <dependency>
@@ -154,6 +155,24 @@
             <artifactId>spring-ai-advisors-vector-store</artifactId>
             <version>${spring-ai-advisors-vector.version}</version>
         </dependency>
+
+        <!-- 手动整合 PGVector 向量存储 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <!-- PgVector 向量存储（手动配置，不使用 starter 自动配置，避免与 dynamic-datasource 冲突） -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-pgvector-store</artifactId>
+            <version>${spring-ai-pgvector.version}</version>
+        </dependency>
+
 
 
 

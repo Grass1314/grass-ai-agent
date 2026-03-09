@@ -8,10 +8,18 @@ spring:
       strict: false
       datasource:
         mysql:
-          url: jdbc:mysql://175.24.73.151:3306/grass_ai_agent?useSSL=false&serverTimezone=UTC
+          url: jdbc:mysql://175.24.73.151:3306/grass_ai_agent?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
           username: grass_ai_agent_root
           password: grass_ai_agent_root_123456
           driver-class-name: com.mysql.cj.jdbc.Driver
+        postgresql:
+          url: jdbc:postgresql://175.24.73.151:5432/ai_agent_pg
+          username: ai_agent_pg_root
+          password: ai_agent_pg_root_123456!
+          driver-class-name: org.postgresql.Driver
+          hikari:
+            maximum-pool-size: 10
+            connection-timeout: 30000
 
   ai:
     dashscope:
@@ -22,6 +30,14 @@ spring:
       # 多模态（读图）模型，用于图片解释
       multimodal:
         model: qwen-vl-plus
+    vectorstore:
+      pgvector:
+        # 向量表配置
+        dimensions: 1024  # DashScope 默认 Embedding 模型输出 1024 维
+        distance-type: COSINE_DISTANCE  # 可选: cosine/l2/inner
+        initialize-schema: false  # 自动初始化表结构
+        max-document-batch-size: 10000 # Optional: Maximum number of documents per batch
+        index-type: HNSW
 
 mybatis-plus:
   configuration:

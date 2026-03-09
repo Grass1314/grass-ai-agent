@@ -1,10 +1,11 @@
 package com.grass.grassaiagent.rag;
 
-import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.vectorstore.SimpleVectorStore;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -16,20 +17,34 @@ import java.util.List;
  * @description: 本地初始化向量数据库配置
  * @date 2026/02/26 09:18
  */
-
+@Slf4j
 @Configuration
 public class LoveAppVectorStoreConfig {
 
-    @Resource
-    private LoveAppDocumentLoader loveAppDocumentLoader;
+    private static final int EMBEDDING_BATCH_SIZE = 10;
 
     @Bean
     VectorStore loveAppVectorStore(EmbeddingModel dashscopeEmbeddingModel) {
-        SimpleVectorStore simpleVectorStore = SimpleVectorStore.builder(dashscopeEmbeddingModel).build();
-        // 加载文档
-        List<Document> documentList = loveAppDocumentLoader.loadMarkdownDocuments();
-        simpleVectorStore.add(documentList);
-        return simpleVectorStore;
+        return SimpleVectorStore.builder(dashscopeEmbeddingModel).build();
     }
 
+    @Bean
+    public CommandLineRunner loadDocumentsIntoLoveAppVectorStore(VectorStore loveAppVectorStore,
+                                                                 LoveAppDocumentLoader loveAppDocumentLoader) {
+        return args -> {
+            try {
+                List<Document> documents = loveAppDocumentLoader.loadMarkdownDocuments();
+                if (documents.isEmpty()) {
+                    return;
+                }
+                for (int i = 0; i < documents.size(); i += EMBEDDING_BATCH_SIZE) {
+                    int end = Math.min(i + EMBEDDING_BATCH_SIZE, documents.size());
+                    loveAppVectorStore.add(documents.subList(i, end));
+                }
+                log.info("LoveApp 本地向量库文档加载完成，共 {} 条", documents.size());
+            } catch (Exception e) {
+                log.warn("LoveApp 本地向量库文档加载失败（不影响启动）: {}", e.getMessage());
+            }
+        };
+    }
 }
