@@ -64,3 +64,9 @@ knife4j:
   enable: true
   setting:
     language: zh_cn
+
+# searchApi
+search-api:
+  api-key: rNFWvAY2puMxosqTXpkvjUAZ
+  api-url: https://www.searchapi.io/api/v1/search
+
