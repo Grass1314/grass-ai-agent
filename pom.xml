@@ -47,6 +47,7 @@
         <jsoup.version>1.18.3</jsoup.version>
         <itextpdf.version>5.5.13.4</itextpdf.version>
         <itext-asian.version>5.2.0</itext-asian.version>
+        <jasypt.version>3.0.5</jasypt.version>
     </properties>
     <dependencies>
         <dependency>
@@ -194,6 +195,13 @@
             <groupId>com.itextpdf</groupId>
             <artifactId>itext-asian</artifactId>
             <version>${itext-asian.version}</version>
+        </dependency>
+
+        <!-- Jasypt：配置文件敏感信息加密 -->
+        <dependency>
+            <groupId>com.github.ulisesbocchio</groupId>
+            <artifactId>jasypt-spring-boot-starter</artifactId>
+            <version>${jasypt.version}</version>
         </dependency>
 
     </dependencies>

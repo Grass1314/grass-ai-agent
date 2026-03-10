@@ -9,13 +9,13 @@ spring:
       datasource:
         mysql:
           url: jdbc:mysql://175.24.73.151:3306/grass_ai_agent?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-          username: grass_ai_agent_root
-          password: grass_ai_agent_root_123456
+          username: ENC(EFm/iH3oINROF1FbqWZ3BWG87NOMfQ51h81+efi+Ui04NMzHaZz3OgABU5P59JrYlwjKe80l18oS1diUXR50Jg==)
+          password: ENC(8Cp9JKA8DMHX5q4vuBfVWvVheBWUF0nhn2oE/9abU0IKwqJAUWmvPidECrl1gSON+W8iCWBkZUvMmgWKQBsPJA==)
           driver-class-name: com.mysql.cj.jdbc.Driver
         postgresql:
           url: jdbc:postgresql://175.24.73.151:5432/ai_agent_pg
-          username: ai_agent_pg_root
-          password: ai_agent_pg_root_123456!
+          username: ENC(1poLjD7DKDcj4Dfx5bqjkEJJyM8LvbwMGlduEB4cV0Z8+RvriKWLwSgaZfuuN2J7mLUcJe9MeUt8Z36WRvlDsQ==)
+          password: ENC(S1se9zkPcAVdHubyxONyL14BohGfLAzOpeG9v7CNm/FEYPfhzEIELNuH8EnikzKJTnkiuWVDKtYetHYbcGcP6g==)
           driver-class-name: org.postgresql.Driver
           hikari:
             maximum-pool-size: 10
@@ -23,7 +23,7 @@ spring:
 
   ai:
     dashscope:
-      api-key: sk-eb1069f36bcd4af0bd638c5e6fa4f026
+      api-key: ENC(CIPK9SQ06RfMeM96kAUR+ZxHnnfULbhxOw+pGJzkgEMDDkUEX/mbKTAOD0hFE5JIYQOL4D7yRxHqvW9GlrbjDSGjQ6zHStAwQOswxj09u98=)
       chat:
         options:
           model: qwen-plus
@@ -67,6 +67,13 @@ knife4j:
 
 # searchApi
 search-api:
-  api-key: rNFWvAY2puMxosqTXpkvjUAZ
+  api-key: ENC(AKzEI01mGuuqNfkhYCyA1qhTpZYmtulsFZvnVFuljMVETz18lumEJyIRN6nl81aMsFtwJIKiXN61kKVRFLgQog==)
   api-url: https://www.searchapi.io/api/v1/search
+
+# Jasypt 配置加密（密钥通过环境变量 JASYPT_ENCRYPTOR_PASSWORD 传入，开发环境使用默认值）
+jasypt:
+  encryptor:
+    password: ${JASYPT_ENCRYPTOR_PASSWORD:grass-ai-agent-secret-2026}
+    algorithm: PBEWITHHMACSHA512ANDAES_256
+    iv-generator-classname: org.jasypt.iv.RandomIvGenerator
 
