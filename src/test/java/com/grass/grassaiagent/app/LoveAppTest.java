@@ -1,12 +1,16 @@
 package com.grass.grassaiagent.app;
 
+import com.grass.grassaiagent.rag.hybrid.HybridDocumentRetriever;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.util.UUID;
 
+@Slf4j
 @SpringBootTest
 class LoveAppTest {
 
@@ -62,5 +66,27 @@ class LoveAppTest {
         String message = "我已经结婚了，但是婚后关系不太亲密，怎么办？";
         String answer = loveApp.doChatWithRag(message, chatId);
         Assertions.assertNotNull(answer);
+    }
+
+    @Test
+    @DisplayName("混合检索 RAG - MERGE 合并策略（VectorStore + MySQL 同时检索）")
+    void testChatWithHybridRagMerge() {
+        String chatId = UUID.randomUUID().toString();
+        String message = "已婚后感觉关系不太亲密，婆媳关系也有些紧张，该怎么办？";
+        String answer = loveApp.doChatWithHybridRag(message, chatId, HybridDocumentRetriever.Strategy.MERGE);
+        Assertions.assertNotNull(answer);
+        Assertions.assertFalse(answer.isBlank());
+        log.info("【MERGE 策略回答】\n{}", answer);
+    }
+
+    @Test
+    @DisplayName("混合检索 RAG - FALLBACK 降级策略（VectorStore 优先，不足时降级到 MySQL）")
+    void testChatWithHybridRagFallback() {
+        String chatId = UUID.randomUUID().toString();
+        String message = "婚后财务管理有什么好建议吗？";
+        String answer = loveApp.doChatWithHybridRag(message, chatId, HybridDocumentRetriever.Strategy.FALLBACK);
+        Assertions.assertNotNull(answer);
+        Assertions.assertFalse(answer.isBlank());
+        log.info("【FALLBACK 策略回答】\n{}", answer);
     }
 }

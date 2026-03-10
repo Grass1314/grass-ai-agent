@@ -1,9 +1,14 @@
 package com.grass.grassaiagent.app;
 
 import com.grass.grassaiagent.advisor.BannedWordsAdvisor;
+import com.grass.grassaiagent.advisor.HybridRagAdvisor;
 import com.grass.grassaiagent.advisor.MyLoggerAdvisor;
 import com.grass.grassaiagent.chatmemory.MysqlSaveChatMemory;
+import com.grass.grassaiagent.mapper.AiKnowledgeDocMapper;
 import com.grass.grassaiagent.rag.QueryRewriter;
+import com.grass.grassaiagent.rag.hybrid.HybridDocumentRetriever;
+import com.grass.grassaiagent.rag.hybrid.MysqlDocumentSearchSource;
+import com.grass.grassaiagent.rag.hybrid.VectorStoreSearchSource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
@@ -41,6 +46,9 @@ public class LoveApp {
 
     @jakarta.annotation.Resource
     private QueryRewriter queryRewriter;
+
+    @jakarta.annotation.Resource
+    private AiKnowledgeDocMapper aiKnowledgeDocMapper;
 
     private static final String SYSTEM_PROMPT = "扮演深耕恋爱心理领域的专家。开场向用户表明身份，告知用户可倾诉恋爱难题。" +
             "围绕单身、恋爱、已婚三种状态提问：单身状态询问社交圈拓展及追求心仪对象的困扰；" +
@@ -158,6 +166,35 @@ public class LoveApp {
                 .advisors(advisorSpec -> advisorSpec.param(ChatMemory.CONVERSATION_ID, chatId))
                 .advisors(new MyLoggerAdvisor())
                 .advisors(QuestionAnswerAdvisor.builder(loveAppVectorStore).build())
+                .call()
+                .chatResponse();
+        String content = chatResponse.getResult().getOutput().getText();
+        log.info("content: {}", content);
+        return content;
+    }
+
+    /**
+     * 混合检索 RAG 对话（VectorStore + MySQL 多源检索）
+     *
+     * @param message  输入
+     * @param chatId   会话id
+     * @param strategy 检索策略：MERGE 合并多源结果 / FALLBACK 主源不足时降级
+     * @return 内容
+     */
+    public String doChatWithHybridRag(String message, String chatId, HybridDocumentRetriever.Strategy strategy) {
+        String rewrittenMessage = queryRewriter.doQueryRewrite(message);
+
+        HybridDocumentRetriever retriever = HybridDocumentRetriever.builder()
+                .addSource(new VectorStoreSearchSource(loveAppVectorStore, 0.5))
+                .addSource(new MysqlDocumentSearchSource(aiKnowledgeDocMapper))
+                .strategy(strategy)
+                .fallbackMinResults(3)
+                .build();
+
+        ChatResponse chatResponse = chatClient.prompt()
+                .user(rewrittenMessage)
+                .advisors(advisorSpec -> advisorSpec.param(ChatMemory.CONVERSATION_ID, chatId))
+                .advisors(HybridRagAdvisor.builder(retriever).topK(5).build())
                 .call()
                 .chatResponse();
         String content = chatResponse.getResult().getOutput().getText();
