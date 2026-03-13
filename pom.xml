@@ -35,12 +35,19 @@
         <hutool.version>5.8.38</hutool.version>
         <knife4j.version>4.4.0</knife4j.version>
         <dashscope-sdk.version>2.22.9</dashscope-sdk.version>
-        <spring-ai-alibaba.version>1.0.0-M6.1</spring-ai-alibaba.version>
+        <spring-ai-alibaba.version>1.1.2.1</spring-ai-alibaba.version>
         <jsonschema-generator.version>4.38.0</jsonschema-generator.version>
         <kryo.version>5.6.2</kryo.version>
         <mysql.version>8.3.0</mysql.version>
         <mysql-plus.version>3.5.12</mysql-plus.version>
         <dynamic-datasource.version>4.3.1</dynamic-datasource.version>
+        <spring-ai-markdown.version>1.1.2</spring-ai-markdown.version>
+        <spring-ai-advisors-vector.version>1.1.2</spring-ai-advisors-vector.version>
+        <spring-ai-pgvector.version>1.1.2</spring-ai-pgvector.version>
+        <jsoup.version>1.18.3</jsoup.version>
+        <itextpdf.version>5.5.13.4</itextpdf.version>
+        <itext-asian.version>5.2.0</itext-asian.version>
+        <jasypt.version>3.0.5</jasypt.version>
     </properties>
     <dependencies>
         <dependency>
@@ -53,6 +60,7 @@
             <artifactId>lombok</artifactId>
             <optional>true</optional>
         </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -82,7 +90,7 @@
 
         <dependency>
             <groupId>com.alibaba.cloud.ai</groupId>
-            <artifactId>spring-ai-alibaba-starter</artifactId>
+            <artifactId>spring-ai-alibaba-starter-dashscope</artifactId>
             <version>${spring-ai-alibaba.version}</version>
         </dependency>
 
@@ -92,6 +100,12 @@
             <artifactId>langchain4j-community-dashscope</artifactId>
             <version>${langchain4j.version}</version>
             <scope>compile</scope>
+            <exclusions>
+                <exclusion>
+                    <artifactId>dashscope-sdk-java</artifactId>
+                    <groupId>com.alibaba</groupId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>
@@ -133,10 +147,62 @@
             <version>${dynamic-datasource.version}</version>
         </dependency>
 
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-markdown-document-reader</artifactId>
+            <version>${spring-ai-markdown.version}</version>
+        </dependency>
 
+        <!-- QuestionAnswerAdvisor 等 RAG 能力，需配合 VectorStore 使用，版本与 Spring AI 1.1.2 对齐 -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-advisors-vector-store</artifactId>
+            <version>${spring-ai-advisors-vector.version}</version>
+        </dependency>
 
+        <!-- 手动整合 PGVector 向量存储 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <!-- PgVector 向量存储（手动配置，不使用 starter 自动配置，避免与 dynamic-datasource 冲突） -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-pgvector-store</artifactId>
+            <version>${spring-ai-pgvector.version}</version>
+        </dependency>
 
+        <!-- Jsoup：HTML 解析与网页抓取 -->
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>${jsoup.version}</version>
+        </dependency>
 
+        <!-- iText 5：PDF 生成 -->
+        <dependency>
+            <groupId>com.itextpdf</groupId>
+            <artifactId>itextpdf</artifactId>
+            <version>${itextpdf.version}</version>
+        </dependency>
+        <!-- iText 亚洲字体包（中文支持） -->
+        <dependency>
+            <groupId>com.itextpdf</groupId>
+            <artifactId>itext-asian</artifactId>
+            <version>${itext-asian.version}</version>
+        </dependency>
+
+        <!-- Jasypt：配置文件敏感信息加密 -->
+        <dependency>
+            <groupId>com.github.ulisesbocchio</groupId>
+            <artifactId>jasypt-spring-boot-starter</artifactId>
+            <version>${jasypt.version}</version>
+        </dependency>
 
     </dependencies>
 
@@ -146,6 +212,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
+                    <release>21</release>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>
@@ -169,34 +236,6 @@
         </plugins>
     </build>
 
-    <repositories>
-        <repository>
-            <id>spring-milestones</id>
-            <name>Spring Milestones</name>
-            <url>https://repo.spring.io/milestone</url>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-        </repository>
-        <repository>
-            <id>spring-snapshots</id>
-            <name>Spring Snapshots</name>
-            <url>https://repo.spring.io/snapshot</url>
-            <releases>
-                <enabled>false</enabled>
-            </releases>
-        </repository>
-        <repository>
-            <name>Central Portal Snapshots</name>
-            <id>central-portal-snapshots</id>
-            <url>https://central.sonatype.com/repository/maven-snapshots/</url>
-            <releases>
-                <enabled>false</enabled>
-            </releases>
-            <snapshots>
-                <enabled>true</enabled>
-            </snapshots>
-        </repository>
-    </repositories>
+    <!-- Spring AI 1.1.2 与 spring-ai-alibaba 1.1.2.0 均已发布至 Maven Central，无需额外仓库 -->
 
 </project>

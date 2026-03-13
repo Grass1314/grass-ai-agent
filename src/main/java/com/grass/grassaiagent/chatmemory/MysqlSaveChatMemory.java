@@ -25,31 +25,20 @@ import java.util.stream.Collectors;
  * @author Mr.Liuxq
  * @version 1.0
  * @description: 基于mysql的会话记忆
+ * 适配 Spring AI 1.1 ChatMemory 接口（get 方法不再有 lastN 参数）
  * @date 2026/02/24 16:42
  */
 @Slf4j
 @Component
 public class MysqlSaveChatMemory implements ChatMemory {
 
+    private static final int DEFAULT_MAX_MESSAGES = 20;
+
     @Resource
     private AiChatSessionService aiChatSessionService;
 
     @Resource
     private AiChatMessageService aiChatMessageService;
-
-    @Override
-    public void add(String conversationId, Message message) {
-        AiChatSession session = getOrCreateSession(conversationId, message.getText());
-
-        AiChatMessage aiChatMessage = new AiChatMessage();
-        aiChatMessage.setSessionId(session.getId());
-        aiChatMessage.setRoleType(message.getMessageType().getValue());
-        aiChatMessage.setContent(message.getText());
-
-        Integer maxOrder = getMaxMessageOrder(session.getId());
-        aiChatMessage.setMessageOrder(maxOrder == null ? 1 : maxOrder + 1);
-        aiChatMessageService.save(aiChatMessage);
-    }
 
     @Override
     public void add(String conversationId, List<Message> messages) {
@@ -79,7 +68,11 @@ public class MysqlSaveChatMemory implements ChatMemory {
     }
 
     /**
-     * 批量消息处理：只持久化尚未存在的消息（请求 + 大模型响应）。
+     * 将传入的消息追加保存到指定会话。
+     * Spring AI 1.1 中 MessageChatMemoryAdvisor 分两次调用 add：
+     *   before() → add(convId, userMessage)
+     *   after()  → add(convId, assistantMessages)
+     * 每次传入的都是增量新消息，直接追加即可，不做位置去重。
      *
      * @param sessionId 会话主键 ai_chat_session.id
      */
@@ -88,12 +81,7 @@ public class MysqlSaveChatMemory implements ChatMemory {
         int nextOrder = (maxExistingOrder == null) ? 1 : maxExistingOrder + 1;
 
         List<AiChatMessage> messagesToSave = new ArrayList<>();
-        for (int i = 0; i < messages.size(); i++) {
-            Message message = messages.get(i);
-            int expectedOrder = i + 1;
-            if (maxExistingOrder != null && expectedOrder <= maxExistingOrder) {
-                continue;
-            }
+        for (Message message : messages) {
             AiChatMessage aiChatMessage = new AiChatMessage();
             aiChatMessage.setSessionId(sessionId);
             aiChatMessage.setRoleType(message.getMessageType().getValue());
@@ -104,7 +92,7 @@ public class MysqlSaveChatMemory implements ChatMemory {
 
         if (!messagesToSave.isEmpty()) {
             aiChatMessageService.saveBatch(messagesToSave);
-            log.info("批量保存 {} 条新消息到会话 {}", messagesToSave.size(), sessionId);
+            log.debug("保存 {} 条消息到会话 {}", messagesToSave.size(), sessionId);
         }
     }
 
@@ -123,8 +111,8 @@ public class MysqlSaveChatMemory implements ChatMemory {
     }
 
     @Override
-    public List<Message> get(String conversationId, int lastN) {
-        if (StrUtil.isBlank(conversationId) || lastN <= 0) {
+    public List<Message> get(String conversationId) {
+        if (StrUtil.isBlank(conversationId)) {
             return List.of();
         }
         AiChatSession session = aiChatSessionService.getOne(
@@ -137,10 +125,10 @@ public class MysqlSaveChatMemory implements ChatMemory {
                 .eq(AiChatMessage::getSessionId, session.getId())
                 .orderByAsc(AiChatMessage::getMessageOrder);
         List<AiChatMessage> messages = aiChatMessageService.list(queryWrapper);
-        if (messages.size() > lastN) {
-            messages = messages.subList(messages.size() - lastN, messages.size());
+        if (messages.size() > DEFAULT_MAX_MESSAGES) {
+            messages = messages.subList(messages.size() - DEFAULT_MAX_MESSAGES, messages.size());
         }
-        return messages.stream().map(msg -> switch (msg.getRoleType()) {
+        return messages.stream().map(msg -> (Message) switch (msg.getRoleType()) {
             case "user" -> new UserMessage(msg.getContent());
             case "assistant" -> new AssistantMessage(msg.getContent());
             default -> new SystemMessage(msg.getContent());
@@ -163,7 +151,6 @@ public class MysqlSaveChatMemory implements ChatMemory {
         }
         for (int i = 0; i < input.length(); i++) {
             char c = input.charAt(i);
-            // 检查逗号,裁剪掉后面的内容
             if (c == ',' || c == '，') {
                 return input.substring(0, i);
             }

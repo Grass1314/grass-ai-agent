@@ -13,6 +13,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 /**
  * 多模态图片解释服务测试：使用百炼公开图片 URL 调用真实接口。
  */
+@Deprecated
 @SpringBootTest
 class AiMultimodalExplainServiceTest {
 
