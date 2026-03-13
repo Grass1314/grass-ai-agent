@@ -89,4 +89,14 @@ class LoveAppTest {
         Assertions.assertFalse(answer.isBlank());
         log.info("【FALLBACK 策略回答】\n{}", answer);
     }
+
+    @Test
+    void testChatWithHybridToolRag() {
+        String chatId = UUID.randomUUID().toString();
+        String message = "我想要使用工具知道婚后关系不太亲密解决方式，请给出建议";
+        String answer = loveApp.doChatWithHybridToolRag(message, chatId, HybridDocumentRetriever.Strategy.MERGE);
+        Assertions.assertNotNull(answer);
+        Assertions.assertFalse(answer.isBlank());
+        log.info("工具调用\n{}", answer);
+    }
 }

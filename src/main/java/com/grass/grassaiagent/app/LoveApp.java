@@ -17,6 +17,7 @@ import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.SystemPromptTemplate;
+import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
@@ -49,6 +50,9 @@ public class LoveApp {
 
     @jakarta.annotation.Resource
     private AiKnowledgeDocMapper aiKnowledgeDocMapper;
+
+    @jakarta.annotation.Resource
+    private ToolCallback[] toolCallbacks;
 
     private static final String SYSTEM_PROMPT = "扮演深耕恋爱心理领域的专家。开场向用户表明身份，告知用户可倾诉恋爱难题。" +
             "围绕单身、恋爱、已婚三种状态提问：单身状态询问社交圈拓展及追求心仪对象的困扰；" +
@@ -195,6 +199,37 @@ public class LoveApp {
                 .user(rewrittenMessage)
                 .advisors(advisorSpec -> advisorSpec.param(ChatMemory.CONVERSATION_ID, chatId))
                 .advisors(HybridRagAdvisor.builder(retriever).topK(5).build())
+                .call()
+                .chatResponse();
+        String content = chatResponse.getResult().getOutput().getText();
+        log.info("content: {}", content);
+        return content;
+    }
+
+    /**
+     * 混合检索 + 工具 RAG 对话（VectorStore + MySQL 多源检索）
+     *
+     * @param message  输入
+     * @param chatId   会话id
+     * @param strategy 检索策略：MERGE 合并多源结果 / FALLBACK 主源不足时降级
+     * @return 内容
+     */
+    public String doChatWithHybridToolRag(String message, String chatId, HybridDocumentRetriever.Strategy strategy) {
+        String rewrittenMessage = queryRewriter.doQueryRewrite(message);
+
+        HybridDocumentRetriever retriever = HybridDocumentRetriever.builder()
+                .addSource(new VectorStoreSearchSource(loveAppVectorStore, 0.5))
+                .addSource(new MysqlDocumentSearchSource(aiKnowledgeDocMapper))
+                .strategy(strategy)
+                .fallbackMinResults(3)
+                .build();
+
+        ChatResponse chatResponse = chatClient.prompt()
+                .user(rewrittenMessage)
+                .advisors(advisorSpec -> advisorSpec.param(ChatMemory.CONVERSATION_ID, chatId))
+                .advisors(HybridRagAdvisor.builder(retriever).topK(5).build())
+                .advisors(new MyLoggerAdvisor())
+                .toolCallbacks(toolCallbacks)
                 .call()
                 .chatResponse();
         String content = chatResponse.getResult().getOutput().getText();
