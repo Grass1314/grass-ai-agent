@@ -38,6 +38,10 @@ spring:
         initialize-schema: false  # 自动初始化表结构
         max-document-batch-size: 10000 # Optional: Maximum number of documents per batch
         index-type: HNSW
+    mcp:
+      client:
+        stdio:
+          servers-configuration: classpath:mcp-servers.json
 
 mybatis-plus:
   configuration:
