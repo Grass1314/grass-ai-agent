@@ -41,7 +41,7 @@ spring:
     mcp:
       client:
         stdio:
-          servers-configuration: classpath:mcp-servers.json
+          servers-configuration: classpath:mcp-servers-local.json
 
 mybatis-plus:
   configuration:

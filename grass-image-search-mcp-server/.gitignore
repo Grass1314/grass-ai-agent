@@ -31,5 +31,3 @@ build/
 
 ### VS Code ###
 .vscode/
-.java-version
-/src/main/resources/mcp-servers-local.json
