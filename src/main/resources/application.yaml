@@ -40,8 +40,12 @@ spring:
         index-type: HNSW
     mcp:
       client:
-        stdio:
-          servers-configuration: classpath:mcp-servers-local.json
+        sse:
+          connections:
+            server:
+              url: http://localhost:8127
+#        stdio:
+#          servers-configuration: classpath:mcp-servers.json
 
 mybatis-plus:
   configuration:
