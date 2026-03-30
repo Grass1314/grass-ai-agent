@@ -1,5 +1,6 @@
 package com.grass.grassaiagent.common;
 
+import com.grass.grassaiagent.exception.ErrorCode;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -36,6 +37,13 @@ public class R<T> implements Serializable {
         R<T> r = new R<>();
         r.code = 500;
         r.message = message;
+        return r;
+    }
+
+    public static <T> R<T> fail(ErrorCode errorCode) {
+        R<T> r = new R<>();
+        r.code = errorCode.getCode();
+        r.message = errorCode.getMessage();
         return r;
     }
 
