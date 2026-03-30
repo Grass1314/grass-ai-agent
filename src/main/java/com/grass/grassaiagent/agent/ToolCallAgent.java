@@ -13,15 +13,18 @@ import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.model.tool.ToolCallingChatOptions;
 import org.springframework.ai.model.tool.ToolCallingManager;
 import org.springframework.ai.model.tool.ToolExecutionResult;
 import org.springframework.ai.tool.ToolCallback;
 
+import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * @description: 处理工具调用的基础代理类
+ * @description: 处理工具调用的基础代理类，含工具调用模式循环检测
  * @author Mr.Grass
  * @version 1.0
  * @date 2026/03/30 14:22
@@ -32,7 +35,7 @@ import java.util.stream.Collectors;
 public class ToolCallAgent extends ReActAgent {
 
     // 可用的工具调用
-    private final ToolCallback[]  availableTools;
+    private final ToolCallback[] availableTools;
 
     // 保存了工具调用信息的响应
     private ChatResponse toolCallChatResponse;
@@ -40,16 +43,30 @@ public class ToolCallAgent extends ReActAgent {
     // 工具调用管理器
     private final ToolCallingManager toolCallingManager;
 
-    // 禁用内置的工具调用机制，自己维护上下文
+    // 禁用内置的工具调用机制，由 Agent 自己管理工具调用流程
     private final ChatOptions chatOptions;
+
+    // 用于 ToolCallingManager 执行工具的选项（包含 toolCallbacks）
+    private final ToolCallingChatOptions toolExecutionOptions;
+
+    // ===== 工具调用模式循环检测 =====
+    /** 最近工具调用签名历史（用于检测重复的工具调用模式） */
+    private final LinkedList<String> recentToolCallSignatures = new LinkedList<>();
+    private static final int MAX_SIGNATURE_HISTORY = 6;
 
     public ToolCallAgent(ToolCallback[] availableTools) {
         super();
         this.availableTools = availableTools;
         this.toolCallingManager = ToolCallingManager.builder().build();
-        this.chatOptions = DashScopeChatOptions.builder()
-                .parallelToolCalls(true)
+        // 关闭 ChatModel 内置的工具自动执行，由 Agent 的 act() 手动管理
+        DashScopeChatOptions options = DashScopeChatOptions.builder()
                 .build();
+        options.setInternalToolExecutionEnabled(false);
+        this.chatOptions = options;
+        // 构建包含工具实现的选项，供 ToolCallingManager 执行工具时使用
+        DashScopeChatOptions execOptions = DashScopeChatOptions.builder().build();
+        execOptions.setToolCallbacks(List.of(availableTools));
+        this.toolExecutionOptions = execOptions;
     }
 
     /**
@@ -67,31 +84,28 @@ public class ToolCallAgent extends ReActAgent {
         Prompt prompt = new Prompt(messageList, chatOptions);
 
         try {
-            // 获取带工具的响应
             ChatResponse chatResponse = getChatClient()
                     .prompt(prompt)
                     .system(getSystemPrompt())
                     .toolCallbacks(availableTools)
                     .call()
                     .chatResponse();
-            // 记录响应，用于Act
             this.toolCallChatResponse = chatResponse;
             AssistantMessage assistantMessage = chatResponse.getResult().getOutput();
-            // 输出提示信息
             String result = assistantMessage.getText();
             List<AssistantMessage.ToolCall> toolCalls = assistantMessage.getToolCalls();
             log.info("{}思考了：{}", getName(), result);
             log.info("{}选择了：{}个工具来使用", getName(), toolCalls.size());
-            String toolCallInfo = toolCalls.stream()
-                    .map(toolCall -> String.format("工具名称: %s, 参数: %s", toolCall.name(), toolCall.arguments()))
-                    .collect(Collectors.joining("\n"));
-            log.info("{}的工具调用信息：{}", getName(), toolCallInfo);
+            if (!toolCalls.isEmpty()) {
+                String toolCallInfo = toolCalls.stream()
+                        .map(toolCall -> String.format("工具名称: %s, 参数: %s", toolCall.name(), toolCall.arguments()))
+                        .collect(Collectors.joining("\n"));
+                log.info("{}的工具调用信息：{}", getName(), toolCallInfo);
+            }
             if (toolCalls.isEmpty()) {
-                // 只有不调用工具时，才记录助手消息
                 getMessageList().add(assistantMessage);
                 return false;
             } else {
-                // 需要调用工工具时，无需记录助手信息，因为调用工具时会自动记录
                 return true;
             }
         } catch (Exception e) {
@@ -111,21 +125,75 @@ public class ToolCallAgent extends ReActAgent {
         if (!toolCallChatResponse.hasToolCalls()) {
             return "没有工具调用";
         }
-        Prompt prompt = new Prompt(getMessageList(), chatOptions);
+
+        // 记录本次工具调用签名，用于循环检测
+        recordToolCallSignature();
+
+        // 使用包含 toolCallbacks 的选项，ToolCallingManager 才能找到工具实现
+        Prompt prompt = new Prompt(getMessageList(), toolExecutionOptions);
         ToolExecutionResult toolExecutionResult = toolCallingManager.executeToolCalls(prompt, toolCallChatResponse);
-        // 记录消息上下文, conversationHistory包含组手消息和工具调用结果
-        setMessageList(toolExecutionResult.conversationHistory());
+        // 确保 conversationHistory 可变，后续步骤需要继续往里追加消息
+        setMessageList(new ArrayList<>(toolExecutionResult.conversationHistory()));
         ToolResponseMessage toolResponseMessage = (ToolResponseMessage) CollUtil.getLast(toolExecutionResult.conversationHistory());
         String results = toolResponseMessage.getResponses().stream()
                 .map(toolResponse -> "工具 " + toolResponse.name() + " 完成了它的任务! 结果: " + toolResponse.responseData())
                 .collect(Collectors.joining("\n"));
         log.info("{}调用工具信息: {}", getName(), results);
-        // 判断是否调用了终止工具
         boolean terminationFlag = toolResponseMessage.getResponses().stream()
-                .anyMatch(response -> "doTerminate".equals(response.name()));
+                .anyMatch(response -> "terminate".equals(response.name()));
         if (terminationFlag) {
             setState(AgentState.FINISHED);
         }
         return results;
+    }
+
+    /**
+     * 增强的循环检测：在父类文本重复检测基础上，
+     * 额外检测工具调用模式是否重复（相同工具+相同参数的调用组合）
+     */
+    @Override
+    protected boolean isStuck() {
+        // 优先检测父类的文本重复
+        if (super.isStuck()) {
+            return true;
+        }
+        // 检测工具调用签名重复
+        return isToolCallPatternRepeating();
+    }
+
+    /**
+     * 检测最近的工具调用模式是否重复
+     * 如果最近连续 N 次工具调用的签名（工具名+参数）完全相同，视为陷入循环
+     */
+    private boolean isToolCallPatternRepeating() {
+        if (recentToolCallSignatures.size() < getDuplicateThreshold() + 1) {
+            return false;
+        }
+        String lastSignature = recentToolCallSignatures.getLast();
+        long count = recentToolCallSignatures.stream()
+                .filter(sig -> sig.equals(lastSignature))
+                .count();
+        return count >= getDuplicateThreshold() + 1;
+    }
+
+    /**
+     * 记录当前步骤的工具调用签名（工具名 + 参数的排序拼接）
+     */
+    private void recordToolCallSignature() {
+        AssistantMessage output = toolCallChatResponse.getResult().getOutput();
+        String signature = output.getToolCalls().stream()
+                .map(tc -> tc.name() + ":" + tc.arguments())
+                .sorted()
+                .collect(Collectors.joining("|"));
+        recentToolCallSignatures.addLast(signature);
+        while (recentToolCallSignatures.size() > MAX_SIGNATURE_HISTORY) {
+            recentToolCallSignatures.removeFirst();
+        }
+    }
+
+    @Override
+    public void cleanup() {
+        super.cleanup();
+        recentToolCallSignatures.clear();
     }
 }

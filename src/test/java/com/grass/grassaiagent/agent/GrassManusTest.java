@@ -14,7 +14,7 @@ class GrassManusTest {
     @Test
     void testRun() {
         String userPrompt = """
-                我的另一半在居住在南京南京秦淮区，请帮我推荐 5 公里内的合适的约会地点，
+                我的另一半在居住在上海黄浦区，请帮我推荐 5 公里内的合适的约会地点，
                 并结合一些网络图片，制定一份详细的约会计划，
                 应以 markdown 格式输出
                 """;
