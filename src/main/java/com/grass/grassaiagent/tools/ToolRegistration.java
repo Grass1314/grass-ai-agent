@@ -32,6 +32,7 @@ public class ToolRegistration {
         TextEncodingTool textEncodingTool = new TextEncodingTool();
         TimeInfoTool timeInfoTool = new TimeInfoTool();
         WebScrapingTool webScrapingTool = new WebScrapingTool();
+        TerminateTool terminateTool = new TerminateTool();
         return ToolCallbacks.from(
                 fileOperationTool,
                 webSearchTool,
@@ -41,6 +42,7 @@ public class ToolRegistration {
                 terminalOperationTool,
                 textEncodingTool,
                 timeInfoTool,
-                webScrapingTool);
+                webScrapingTool,
+                terminateTool);
     }
 }

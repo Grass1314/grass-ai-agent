@@ -35,6 +35,15 @@ class LoveAppTest {
     }
 
     @Test
+    void testChatWithMcp() {
+        String chatId = UUID.randomUUID().toString();
+        String message = "我的另一半居住在南京鼓楼区，请帮我推荐5公里内合适约会的地点";
+        String answer = loveApp.doChatWithMcp(message, chatId);
+        Assertions.assertNotNull(answer);
+        log.info("【MCP调用回答】\n{}", answer);
+    }
+
+    @Test
     void testChatWithReport() {
         String chatId = UUID.randomUUID().toString();
         String message = "你好，我是程序员小草，我想让另一半（婷婷）更爱我，但我不知道怎么做";
@@ -98,5 +107,15 @@ class LoveAppTest {
         Assertions.assertNotNull(answer);
         Assertions.assertFalse(answer.isBlank());
         log.info("工具调用\n{}", answer);
+    }
+
+    @Test
+    void testChatWithPictureMcp() {
+        // 测试图片搜索MCP
+        String chatId = UUID.randomUUID().toString();
+        String message = "帮我搜索一些哄另一半开心的cat图片";
+        String answer = loveApp.doChatWithMcp(message, chatId);
+        Assertions.assertNotNull(answer);
+        log.info("【MCP调用回答】\n{}", answer);
     }
 }

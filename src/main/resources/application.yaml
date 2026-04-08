@@ -38,6 +38,24 @@ spring:
         initialize-schema: false  # 自动初始化表结构
         max-document-batch-size: 10000 # Optional: Maximum number of documents per batch
         index-type: HNSW
+    mcp:
+      client:
+        sse:
+          connections:
+            server:
+              url: http://localhost:8127
+#        stdio:
+#          servers-configuration: classpath:mcp-servers.json
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    com.grass.grassaiagent: INFO
+    com.grass.grassaiagent.advisor: DEBUG
+    org.springframework.ai: INFO
+  file:
+    name: ./logs/grass-ai-agent.log
 
 mybatis-plus:
   configuration:
