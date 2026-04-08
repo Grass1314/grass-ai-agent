@@ -1,7 +1,6 @@
 package com.grass.grassaiagent.agent;
 
 import cn.hutool.core.util.StrUtil;
-
 import com.grass.grassaiagent.agent.model.AgentState;
 import com.grass.grassaiagent.exception.BusinessException;
 import com.grass.grassaiagent.exception.ErrorCode;
@@ -11,9 +10,11 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * <p>
@@ -111,6 +112,72 @@ public abstract class BaseAgent {
         } finally {
             this.cleanup();
         }
+    }
+
+    public SseEmitter runStream(String userPrompt) {
+        SseEmitter emitter = new SseEmitter(300000L);
+
+        CompletableFuture.runAsync(() -> {
+            try {
+                if (this.state != AgentState.IDLE) {
+                    emitter.send("错误: 无法从状态运行代理：" + this.state);
+                    emitter.complete();
+                    return;
+                }
+                if (StrUtil.isBlank(userPrompt)) {
+                    emitter.send("错误: 无效的提示词");
+                    emitter.complete();
+                    return;
+                }
+                this.state = AgentState.RUNNING;
+                this.originalNextStepPrompt = this.nextStepPrompt;
+                messageList.add(new UserMessage(userPrompt));
+                try {
+                    for (int i = 0; i < maxSteps && this.state != AgentState.FINISHED; i++) {
+                        int stepNumber = i + 1;
+                        currentStep = stepNumber;
+                        log.info("Executing step {}/{}", stepNumber, maxSteps);
+                        // 单步执行
+                        String stepResult = step();
+                        String result = "Step " + stepNumber + ": " + stepResult;
+
+                        // 发送每一步的结果
+                        emitter.send(result);
+                    }
+                    // 检查是否超出步骤限制
+                    if (currentStep >= maxSteps && state != AgentState.FINISHED) {
+                        state = AgentState.FINISHED;
+                        emitter.send("Terminated: Reached max steps (" + maxSteps + ")");
+                    }
+                    // 正常完成
+                    emitter.complete();
+                } catch (Exception e) {
+                    state = AgentState.ERROR;
+                    log.error("Error executing agent", e);
+                    emitter.send("Error: " + e.getMessage());
+                    emitter.complete();
+                } finally {
+                    this.cleanup();
+                }
+            } catch (Exception e) {
+                emitter.completeWithError(e);
+            }
+        });
+        // 设置超时与完成回调
+        emitter.onTimeout(() -> {
+            this.state = AgentState.TIMEOUT;
+            this.cleanup();
+            log.warn("SSE connection timed out");
+        });
+        emitter.onCompletion(() -> {
+            if (this.state == AgentState.RUNNING) {
+                this.state = AgentState.FINISHED;
+            }
+            this.cleanup();
+            log.info("SSE connection completed");
+        });
+
+        return emitter;
     }
 
     /**
