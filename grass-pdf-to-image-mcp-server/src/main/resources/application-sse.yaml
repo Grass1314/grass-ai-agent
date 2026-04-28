@@ -1,0 +1,8 @@
+spring:
+  ai:
+    mcp:
+      server:
+        name: grass-pdf-to-image-mcp-server
+        version: 1.0.0
+        type: sync
+        stdio: false

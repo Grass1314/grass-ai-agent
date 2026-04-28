@@ -42,8 +42,10 @@ spring:
       client:
         sse:
           connections:
-            server:
+            image-search-server:
               url: http://localhost:8127
+            pdf-to-image-server:
+              url: http://localhost:8128
 #        stdio:
 #          servers-configuration: classpath:mcp-servers.json
 

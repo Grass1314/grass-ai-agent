@@ -118,4 +118,14 @@ class LoveAppTest {
         Assertions.assertNotNull(answer);
         log.info("【MCP调用回答】\n{}", answer);
     }
+
+    @Test
+    void testChatWithPdfToImageMcp() {
+        // 测试PDF文档转换图片MCP
+        String chatId = UUID.randomUUID().toString();
+        String message = "帮将“满意度评估汇总.pdf”文件转成图片，输出分辨率dpi设置为210，文件地址：/Users/grass/Documents/Code/Study/project/grass-ai-agent/grass-pdf-to-image-mcp-server/src/main/resources/template/《员工外派学习审批表（总部）》.pdf   输出的文件地址：/Users/grass/Documents/Code/Study/project/grass-ai-agent/tmp/files";
+        String answer = loveApp.doChatWithMcp(message, chatId);
+        Assertions.assertNotNull(answer);
+        log.info("【MCP调用回答】\n{}", answer);
+    }
 }
