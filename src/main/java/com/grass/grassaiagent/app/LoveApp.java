@@ -20,6 +20,7 @@ import org.springframework.ai.chat.prompt.SystemPromptTemplate;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
@@ -56,7 +57,7 @@ public class LoveApp {
     @jakarta.annotation.Resource
     private ToolCallback[] toolCallbacks;
 
-    @jakarta.annotation.Resource
+    @Autowired(required = false)
     private ToolCallbackProvider toolCallbackProvider;
 
     private static final String SYSTEM_PROMPT = "扮演深耕恋爱心理领域的专家。开场向用户表明身份，告知用户可倾诉恋爱难题。" +
@@ -156,6 +157,9 @@ public class LoveApp {
      * @return  内容
      */
     public String doChatWithMcp(String message, String chatId) {
+        if (toolCallbackProvider == null) {
+            throw new IllegalStateException("MCP 客户端未启用，请设置 GRASS_MCP_ENABLED=true 并先启动 MCP Server");
+        }
         ChatResponse chatResponse = chatClient
                 .prompt()
                 .user(message)

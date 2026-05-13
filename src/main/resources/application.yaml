@@ -40,6 +40,9 @@ spring:
         index-type: HNSW
     mcp:
       client:
+        # 默认关闭 MCP 客户端，避免本地未启动 MCP Server 时主服务启动失败。
+        # 需要 MCP 工具时先启动 8127/8128 服务，并设置 GRASS_MCP_ENABLED=true。
+        enabled: ${GRASS_MCP_ENABLED:false}
         sse:
           connections:
             image-search-server:

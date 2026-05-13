@@ -13,7 +13,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import static org.springframework.ai.vectorstore.pgvector.PgVectorStore.PgDistanceType.COSINE_DISTANCE;
 import static org.springframework.ai.vectorstore.pgvector.PgVectorStore.PgIndexType.HNSW;
@@ -32,6 +36,7 @@ import static org.springframework.ai.vectorstore.pgvector.PgVectorStore.PgIndexT
 public class PgVectorVectorStoreConfig {
 
     private static final int EMBEDDING_BATCH_SIZE = 10;
+    private static final String VECTOR_TABLE_NAME = "ai_pg_vector_store";
 
     @Value("${spring.datasource.dynamic.datasource.postgresql.url}")
     private String pgUrl;
@@ -62,7 +67,7 @@ public class PgVectorVectorStoreConfig {
                 .indexType(HNSW)
                 .initializeSchema(true)
                 .schemaName("public")
-                .vectorTableName("ai_pg_vector_store")
+                .vectorTableName(VECTOR_TABLE_NAME)
                 .maxDocumentBatchSize(EMBEDDING_BATCH_SIZE)
                 .build();
     }
@@ -81,14 +86,56 @@ public class PgVectorVectorStoreConfig {
                     log.info("PgVector: 无文档需要加载");
                     return;
                 }
-                for (int i = 0; i < documents.size(); i += EMBEDDING_BATCH_SIZE) {
-                    int end = Math.min(i + EMBEDDING_BATCH_SIZE, documents.size());
-                    pgVectorVectorStore.add(documents.subList(i, end));
+
+                JdbcTemplate pgJdbcTemplate = createPgJdbcTemplate();
+                List<Document> missingDocuments = findMissingDocuments(pgJdbcTemplate, documents);
+                if (missingDocuments.isEmpty()) {
+                    log.info("PgVector: 知识库文档已存在，跳过 Embedding 加载");
+                    return;
                 }
-                log.info("PgVector 文档加载完成，共 {} 条", documents.size());
+
+                for (int i = 0; i < missingDocuments.size(); i += EMBEDDING_BATCH_SIZE) {
+                    int end = Math.min(i + EMBEDDING_BATCH_SIZE, missingDocuments.size());
+                    pgVectorVectorStore.add(missingDocuments.subList(i, end));
+                }
+                log.info("PgVector 缺失文档加载完成，共 {} 条", missingDocuments.size());
             } catch (Exception e) {
                 log.warn("PgVector 文档加载失败（不影响启动）: {}", e.getMessage());
             }
         };
+    }
+
+    private List<Document> findMissingDocuments(JdbcTemplate pgJdbcTemplate, List<Document> documents) {
+        Map<String, List<Document>> documentsByFilename = documents.stream()
+                .collect(Collectors.groupingBy(this::getFilename, LinkedHashMap::new, Collectors.toList()));
+
+        List<Document> missingDocuments = new ArrayList<>();
+        for (Map.Entry<String, List<Document>> entry : documentsByFilename.entrySet()) {
+            String filename = entry.getKey();
+            if (filename.isBlank()) {
+                missingDocuments.addAll(entry.getValue());
+                continue;
+            }
+            if (hasDocumentsByFilename(pgJdbcTemplate, filename)) {
+                log.info("PgVector: 知识库文件已存在，跳过加载: {}", filename);
+                continue;
+            }
+            missingDocuments.addAll(entry.getValue());
+        }
+        return missingDocuments;
+    }
+
+    private boolean hasDocumentsByFilename(JdbcTemplate pgJdbcTemplate, String filename) {
+        Integer count = pgJdbcTemplate.queryForObject("""
+                SELECT COUNT(1)
+                FROM public.%s
+                WHERE metadata ->> 'filename' = ?
+                """.formatted(VECTOR_TABLE_NAME), Integer.class, filename);
+        return count != null && count > 0;
+    }
+
+    private String getFilename(Document document) {
+        Object filename = document.getMetadata().get("filename");
+        return filename == null ? "" : filename.toString();
     }
 }
